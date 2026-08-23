@@ -1,0 +1,9 @@
+{
+  "trusted_devices": [
+    {
+      "serial": "REPLACE_ON_VM_WITH_udevadm_info_output",
+      "label": "TSYVIQ_DEMO_USB",
+      "note": "Match is serial-first, label-fallback. On the Ubuntu VM, insert the real demo USB and run `udevadm info -a -n /dev/sdX` (see runbook) to get the real ID_SERIAL_SHORT, then replace the serial value above."
+    }
+  ]
+}

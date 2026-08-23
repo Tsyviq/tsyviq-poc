@@ -1,0 +1,4 @@
+{
+  "transfer_low": { "requires_event": false },
+  "transfer_high": { "requires_event": true, "event_type": "usb_insert", "max_age_sec": 90 }
+}
