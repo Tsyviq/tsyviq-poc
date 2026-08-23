@@ -28,7 +28,8 @@ from __future__ import annotations
 
 import os
 import sys
-from dataclasses import dataclass, field
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -208,16 +209,16 @@ def create_app(monitor: Optional[AcquisitionSource] = None) -> FastAPI:
         pending.rod = rod
         state.record("acquired", attrs, request_id=pending.request_id)
 
-    app = FastAPI(title="TSYVIQ PoC — Event Source")
-    app.state.tsyviq = state
-
-    @app.on_event("startup")
-    def _startup() -> None:
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
         state.monitor.start(on_device_event)
+        try:
+            yield
+        finally:
+            state.monitor.stop()
 
-    @app.on_event("shutdown")
-    def _shutdown() -> None:
-        state.monitor.stop()
+    app = FastAPI(title="TSYVIQ PoC — Event Source", lifespan=lifespan)
+    app.state.tsyviq = state
 
     @app.post("/event/request", response_model=EventRequestOut)
     def event_request(body: EventRequestIn) -> EventRequestOut:
