@@ -36,6 +36,7 @@ from typing import Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -51,6 +52,7 @@ from common import (  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EVENT_SOURCE_PUBLIC_KEY_PATH = REPO_ROOT / "event-source" / "event_pk.pem"
 LOCK_FILE_PATH = Path(__file__).resolve().parent / ".wallet.lock"
+INDEX_HTML_PATH = Path(__file__).resolve().parent / "index.html"
 
 POLICY_SERVICE_URL = os.environ.get("POLICY_SERVICE_URL", "http://127.0.0.1:8002")
 EVENT_SOURCE_URL = os.environ.get("EVENT_SOURCE_URL", "http://127.0.0.1:8003")
@@ -476,6 +478,10 @@ def create_app(
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok"}
+
+    @app.get("/", response_class=HTMLResponse)
+    def investor_ui() -> str:
+        return INDEX_HTML_PATH.read_text()
 
     return app
 

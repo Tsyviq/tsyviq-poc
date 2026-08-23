@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TSYVIQ PoC — USB Insert</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel-2: #1a2230;
+    --border: #263041;
+    --text: #e6edf3;
+    --muted: #8b96a5;
+    --red: #ff5d5d;
+    --yellow: #f5c542;
+    --green: #3ddc84;
+    --blue: #5aa9ff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    padding: 24px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: 0.02em; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; }
+
+  .bod-rod-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px; }
+  .bod-rod-grid .col { background: var(--panel-2); border-radius: 8px; padding: 12px 14px; }
+  .bod-rod-grid .col b { color: var(--blue); }
+  .patent-mapping { margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+  .balance-row { display: flex; align-items: baseline; gap: 16px; }
+  .balance-value { font-size: 42px; font-weight: 700; font-variant-numeric: tabular-nums; transition: color 0.4s; }
+  .balance-delta { font-size: 14px; color: var(--muted); }
+  .balance-flash { color: var(--green) !important; }
+
+  .status-pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .status-pill.none { background: #263041; color: var(--muted); }
+  .status-pill.bod { background: #263041; color: var(--blue); }
+  .status-pill.not-constituted { background: rgba(255,93,93,0.15); color: var(--red); }
+  .status-pill.awaiting { background: rgba(245,197,66,0.15); color: var(--yellow); }
+  .status-pill.acquired { background: rgba(90,169,255,0.15); color: var(--blue); }
+  .status-pill.constituted { background: rgba(61,220,132,0.15); color: var(--green); }
+
+  .action-meta { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; word-break: break-all; }
+  .action-meta div span.k { color: var(--muted); margin-right: 6px; }
+  .action-meta div span.v { color: var(--text); }
+
+  .buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--blue); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--blue); color: #0b0f14; border-color: var(--blue); font-weight: 600; }
+  button.danger { border-color: var(--red); color: var(--red); }
+  button.ghost { background: transparent; }
+
+  .result-box {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    display: none;
+  }
+  .result-box.show { display: block; }
+  .result-box.ok { border-color: var(--green); background: rgba(61,220,132,0.08); }
+  .result-box.fail { border-color: var(--red); background: rgba(255,93,93,0.08); }
+  .result-box .headline { font-weight: 700; margin-bottom: 4px; }
+  .result-box pre { margin: 8px 0 0; white-space: pre-wrap; word-break: break-all; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .low-stakes { border-top: 1px dashed var(--border); margin-top: 16px; padding-top: 16px; }
+
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TSYVIQ PoC — USB Insert</h1>
+  <div class="subtitle">Causal separation of the digital and material control contours</div>
+
+  <div class="panel">
+    <h2>BOD vs ROD</h2>
+    <div class="bod-rod-grid">
+      <div class="col">
+        <b>BOD</b> — Bit-Origin Data<br>
+        Anything created purely by digital operations: an intent, a policy result, a pending-request status.
+        A compromised agent can produce as much BOD as it wants — BOD decides nothing by itself.
+      </div>
+      <div class="col">
+        <b>ROD</b> — Reality-Origin Data<br>
+        A digital trace whose valid appearance depends on a real physical event (here: a trusted USB
+        insertion), acquired locally by Event Source. Not just "signed JSON" — its origin is what matters.
+      </div>
+    </div>
+    <div class="patent-mapping">ROD/T &rarr; current Cq &rarr; constituted state</div>
+  </div>
+
+  <div class="panel">
+    <h2>Wallet — user1</h2>
+    <div class="balance-row">
+      <div class="balance-value" id="balance">—</div>
+      <div class="balance-delta" id="balanceDelta"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Current Action</h2>
+    <div>
+      <span class="status-pill none" id="statusPill">NO ACTION</span>
+    </div>
+    <div class="action-meta" id="actionMeta"></div>
+
+    <div class="buttons">
+      <button class="primary" id="btnPrepare">1 · Prepare 6000</button>
+      <button id="btnExecuteNoRod">2 · Execute without Cq</button>
+      <button id="btnForge">3 · Forge fake ROD/T</button>
+      <button id="btnRequestEvent">4 · Request Event</button>
+      <button id="btnExecute">7 · Execute</button>
+      <button id="btnExecuteReplay" class="ghost">8 · Replay Execute</button>
+      <button class="danger" id="btnReset">Reset Demo</button>
+    </div>
+
+    <div class="result-box" id="resultBox">
+      <div class="headline" id="resultHeadline"></div>
+      <div id="resultBody"></div>
+    </div>
+
+    <div class="low-stakes">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Low-stakes comparison — same wallet, no ROD required</div>
+      <div class="buttons">
+        <button id="btnLowStakes">Low-stakes 100 (no USB needed)</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>PoC demo-level security — see README for named next-milestone limitations (A.6).</footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let pollTimer = null;
+let lastBalance = null;
+
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (body !== undefined) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
+  const r = await fetch(path, opts);
+  let data = null;
+  try { data = await r.json(); } catch (e) {}
+  return { ok: r.ok, status: r.status, data };
+}
+
+function setBalance(newBalance) {
+  const el = $("balance");
+  const deltaEl = $("balanceDelta");
+  el.textContent = newBalance;
+  if (lastBalance !== null && lastBalance !== newBalance) {
+    deltaEl.textContent = `${lastBalance} → ${newBalance}`;
+    el.classList.add("balance-flash");
+    setTimeout(() => el.classList.remove("balance-flash"), 900);
+  }
+  lastBalance = newBalance;
+}
+
+function setStatusPill(label, cls) {
+  const pill = $("statusPill");
+  pill.textContent = label;
+  pill.className = "status-pill " + cls;
+}
+
+function renderActionMeta(state) {
+  const el = $("actionMeta");
+  if (!state || !state.action_id) { el.innerHTML = ""; return; }
+  const evStatus = state.event_status ? state.event_status.status : "—";
+  let rodLines = "";
+  if (state.event_status && state.event_status.rod) {
+    const rod = state.event_status.rod;
+    rodLines = `
+      <div><span class="k">rod_id</span><span class="v">${rod.rod_id}</span></div>
+      <div><span class="k">device_id</span><span class="v">${rod.device_id}</span></div>
+      <div><span class="k">origin_commitment</span><span class="v">${rod.origin_commitment}</span></div>
+      <div><span class="k">acquired_at</span><span class="v">${rod.acquired_at}</span></div>
+    `;
+  }
+  el.innerHTML = `
+    <div><span class="k">action_id</span><span class="v">${state.action_id}</span></div>
+    <div><span class="k">action_type</span><span class="v">${state.action_type} (${state.amount} ${state.currency})</span></div>
+    <div><span class="k">tx_hash</span><span class="v">${state.tx_hash}</span></div>
+    <div><span class="k">intent status</span><span class="v">${state.status}</span></div>
+    <div><span class="k">event status</span><span class="v">${evStatus}</span></div>
+    ${rodLines}
+  `;
+}
+
+function showResult(kind, headline, body) {
+  const box = $("resultBox");
+  box.className = "result-box show " + kind;
+  $("resultHeadline").textContent = headline;
+  $("resultBody").innerHTML = body || "";
+}
+
+function hideResult() {
+  $("resultBox").className = "result-box";
+}
+
+async function refreshState() {
+  const { data: state } = await api("GET", "/demo/state");
+  const { data: bal } = await api("GET", "/balance/user1");
+  if (bal) setBalance(bal.balance);
+  renderActionMeta(state);
+
+  if (!state || !state.action_id) {
+    setStatusPill("NO ACTION", "none");
+    return state;
+  }
+  if (state.status === "executed") {
+    setStatusPill("CONSTITUTED / EXECUTED", "constituted");
+  } else if (state.event_status && state.event_status.status === "acquired") {
+    setStatusPill("ROD/T ACQUIRED", "acquired");
+  } else if (state.event_status && state.event_status.status === "awaiting_usb_insert") {
+    setStatusPill("AWAITING MATERIAL EVENT — INSERT TRUSTED USB", "awaiting");
+  } else {
+    setStatusPill("PREPARED (BOD)", "bod");
+  }
+  return state;
+}
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(refreshState, 900);
+}
+function stopPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+$("btnPrepare").onclick = async () => {
+  hideResult();
+  await api("POST", "/demo/prepare?stakes=high");
+  await refreshState();
+  startPolling();
+};
+
+$("btnExecuteNoRod").onclick = async () => {
+  const { data } = await api("POST", "/demo/execute-no-rod");
+  await refreshState();
+  showResult(
+    data.constituted ? "ok" : "fail",
+    data.constituted ? "CONSTITUTED" : "NOT CONSTITUTED / NO COMMIT",
+    data.reason || ""
+  );
+};
+
+$("btnForge").onclick = async () => {
+  const { data } = await api("POST", "/demo/forge-attempt");
+  showResult(
+    data.cq_formed ? "ok" : "fail",
+    data.cq_formed ? "Cq FORMED (unexpected!)" : "Cq NOT FORMED",
+    `verify_rod() rejected the forged ROD: <b>${data.reason}</b>`
+  );
+};
+
+$("btnRequestEvent").onclick = async () => {
+  const { ok, data } = await api("POST", "/demo/request-event");
+  await refreshState();
+  if (ok) {
+    showResult("fail", "AWAITING MATERIAL EVENT", "Insert the trusted demo USB now. No ROD exists yet.");
+    startPolling();
+  } else {
+    showResult("fail", "Could not request event", JSON.stringify(data));
+  }
+};
+
+$("btnExecute").onclick = async () => {
+  const { data } = await api("POST", "/demo/execute");
+  await refreshState();
+  if (data.constituted) {
+    showResult("ok", "Cq FORMED → CONSTITUTED → EXECUTED", `balance is now <b>${data.balance}</b>`);
+  } else {
+    showResult("fail", "NOT CONSTITUTED", data.reason || "");
+  }
+};
+
+$("btnExecuteReplay").onclick = async () => {
+  const before = lastBalance;
+  const { data } = await api("POST", "/demo/execute");
+  await refreshState();
+  showResult(
+    "ok",
+    "Replay — Cq not re-formed, no second commit",
+    `balance before: <b>${before}</b>, balance after replay: <b>${data.balance}</b> (unchanged)`
+  );
+};
+
+$("btnLowStakes").onclick = async () => {
+  hideResult();
+  stopPolling();
+  await api("POST", "/demo/prepare?stakes=low");
+  const { data } = await api("POST", "/demo/execute");
+  await refreshState();
+  showResult("ok", "Low-stakes EXECUTED without any ROD", `balance is now <b>${data.balance}</b>`);
+};
+
+$("btnReset").onclick = async () => {
+  stopPolling();
+  hideResult();
+  await api("POST", "/demo/reset");
+  lastBalance = null;
+  await refreshState();
+};
+
+refreshState();
+</script>
+</body>
+</html>
