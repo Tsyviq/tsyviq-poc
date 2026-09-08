@@ -65,6 +65,8 @@ class PyudevUsbMonitor:
     def __init__(self) -> None:
         self._observer = None
         self._on_event: Optional[OnDeviceEvent] = None
+        self._context = None
+        self._monitor = None
 
     def start(self, on_event: OnDeviceEvent) -> None:
         if sys.platform != "linux":
@@ -74,10 +76,11 @@ class PyudevUsbMonitor:
         import pyudev  # local import: keeps this file importable on macOS
 
         self._on_event = on_event
-        context = pyudev.Context()
-        monitor = pyudev.Monitor.from_netlink(context)
-        monitor.filter_by(subsystem="block")
-        self._observer = pyudev.MonitorObserver(monitor, callback=self._handle_udev_device)
+        self._context = pyudev.Context()
+        self._monitor = pyudev.Monitor.from_netlink(self._context)
+        self._monitor.filter_by(subsystem="block")
+        self._monitor.start()  # activate netlink socket before Observer starts polling it
+        self._observer = pyudev.MonitorObserver(self._monitor, callback=self._handle_udev_device)
         self._observer.start()
 
     def stop(self) -> None:
